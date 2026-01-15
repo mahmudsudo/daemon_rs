@@ -1,0 +1,66 @@
+[package]
+name = "daemon_rs"
+version = "0.1.0"
+edition = "2021"
+
+description = "High-performance structured logging daemon with Parquet storage"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/example/daemon_rs"
+keywords = ["logging", "daemon", "parquet", "observability", "high-performance"]
+categories = ["command-line-utilities", "development-tools::profiling"]
+
+[lib]
+name = "daemon_rs"
+path = "src/lib.rs"
+doctest = false
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.42", features = ["full"] }
+tokio-util = { version = "0.7", features = ["codec"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+jsonschema = "0.17"
+simd-json = { version = "0.13", features = ["serde_impl"] }
+simd-json-derive = "0.13"
+
+# Parquet storage
+arrow = { version = "53.3", features = ["prettyprint"] }
+parquet = { version = "53.3", features = ["async"] }
+
+# Metrics
+metrics = "0.21"
+metrics-exporter-prometheus = "0.12"
+metrics-util = "0.15"
+
+# System
+num_cpus = "1.16"
+tokio-uring = "0.5"
+
+# CLI
+clap = { version = "4.5", features = ["derive"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "2.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Utilities
+chrono = { version = "0.4", features = ["serde"] }
+bytes = "1.9"
+toml = "0.8"
+
+[dev-dependencies]
+tempfile = "3.14"
+criterion = "0.5"
+
+[[bench]]
+name = "throughput"
+harness = false
