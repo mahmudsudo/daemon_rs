@@ -6,7 +6,7 @@ edition = "2021"
 description = "High-performance structured logging daemon with Parquet storage"
 license = "MIT"
 readme = "README.md"
-repository = "https://github.com/example/daemon_rs"
+repository = "https://github.com/mahmudsudo/daemon_rs"
 keywords = ["logging", "daemon", "parquet", "observability", "high-performance"]
 categories = ["command-line-utilities", "development-tools::profiling"]
 
