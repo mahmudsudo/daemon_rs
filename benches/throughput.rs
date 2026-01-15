@@ -43,11 +43,11 @@ fn benchmark_parquet_write(c: &mut Criterion) {
             .unwrap();
 
             for i in 0..1000 {
-                let log = json!({
+                let log: daemon_rs::schema::LogEntry = serde_json::from_value(json!({
                     "timestamp": "2026-01-15T19:00:00Z",
                     "level": "info",
                     "message": format!("Benchmark message {}", i),
-                });
+                })).unwrap();
                 engine.add_log(log).unwrap();
             }
 
