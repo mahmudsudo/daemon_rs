@@ -223,6 +223,11 @@ async fn search_traces(
 fn load_all_spans(storage_dir: &std::path::Path) -> Result<Vec<TraceSpan>> {
     let mut all_spans = Vec::new();
 
+    // Return empty vec if directory doesn't exist yet
+    if !storage_dir.exists() {
+        return Ok(all_spans);
+    }
+
     for entry in std::fs::read_dir(storage_dir)? {
         let entry = entry?;
         let path = entry.path();
