@@ -50,6 +50,7 @@ impl StorageEngine {
     }
 
     /// Add a log entry to the current batch
+    #[tracing::instrument(skip(self, log), fields(batch_size = self.current_batch.len()))]
     pub fn add_log(&mut self, log: LogEntry) -> Result<()> {
         self.current_batch.push(log);
         metrics::counter!(crate::metrics::INGEST_COUNT, 1);
@@ -63,6 +64,7 @@ impl StorageEngine {
     }
 
     /// Flush the current batch to disk
+    #[tracing::instrument(skip(self), fields(batch_size = self.current_batch.len()))]
     pub fn flush(&mut self) -> Result<()> {
         if self.current_batch.is_empty() {
             return Ok(());
@@ -88,7 +90,7 @@ impl StorageEngine {
 
         // Clear the current batch
         self.current_batch.clear();
-        
+
         // Reset file path tracking (we don't keep files open across batches currently)
         self.current_file_path = None;
         self.current_file_size = 0;
@@ -288,7 +290,8 @@ mod tests {
             "timestamp": "2026-01-15T19:00:00Z",
             "level": "info",
             "message": "Test log"
-        })).unwrap();
+        }))
+        .unwrap();
 
         engine.add_log(log).unwrap();
         engine.flush().unwrap();

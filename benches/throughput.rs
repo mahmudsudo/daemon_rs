@@ -47,7 +47,8 @@ fn benchmark_parquet_write(c: &mut Criterion) {
                     "timestamp": "2026-01-15T19:00:00Z",
                     "level": "info",
                     "message": format!("Benchmark message {}", i),
-                })).unwrap();
+                }))
+                .unwrap();
                 engine.add_log(log).unwrap();
             }
 

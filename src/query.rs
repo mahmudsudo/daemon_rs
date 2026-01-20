@@ -33,6 +33,7 @@ impl QueryEngine {
     }
 
     /// Read all logs from Parquet files
+    #[tracing::instrument(skip(self))]
     pub fn read_all(&self) -> Result<Vec<RecordBatch>> {
         let files = self.list_files()?;
         let mut batches = Vec::new();
@@ -78,6 +79,7 @@ impl QueryEngine {
     }
 
     /// Get total number of log entries
+    #[tracing::instrument(skip(self))]
     pub fn count_logs(&self) -> Result<usize> {
         let batches = self.read_all()?;
         let total: usize = batches.iter().map(|b| b.num_rows()).sum();
@@ -111,7 +113,8 @@ mod tests {
                 "timestamp": "2026-01-15T19:00:00Z",
                 "level": "info",
                 "message": format!("Test log {}", i)
-            })).unwrap();
+            }))
+            .unwrap();
             engine.add_log(log).unwrap();
         }
         engine.flush().unwrap();

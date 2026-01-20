@@ -1,15 +1,17 @@
+mod ai_api;
 mod config;
 mod metrics;
+mod otel;
 mod query;
 mod schema;
 mod server;
 mod storage;
+mod trace_storage;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use tracing::info;
-use tracing_subscriber;
 
 use query::QueryEngine;
 use schema::SchemaValidator;
@@ -59,6 +61,26 @@ enum Commands {
         /// Flush interval in seconds
         #[arg(short, long, default_value = "5")]
         flush_interval: u64,
+
+        /// Enable OpenTelemetry tracing
+        #[arg(long, default_value = "true")]
+        otel_enabled: bool,
+
+        /// OTLP endpoint for trace export (optional)
+        #[arg(long)]
+        otel_endpoint: Option<String>,
+
+        /// Trace sampling rate (0.0 to 1.0)
+        #[arg(long, default_value = "1.0")]
+        otel_sampling_rate: f64,
+
+        /// AI API server port
+        #[arg(long, default_value = "9101")]
+        ai_api_port: u16,
+
+        /// Trace storage directory
+        #[arg(long, default_value = "./traces")]
+        trace_storage: PathBuf,
     },
 
     /// Query stored logs
@@ -88,14 +110,6 @@ enum Commands {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize tracing
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::from_default_env()
-                .add_directive(tracing::Level::INFO.into()),
-        )
-        .init();
-
     let cli = Cli::parse();
 
     match cli.command {
@@ -108,11 +122,48 @@ async fn main() -> Result<()> {
             max_connections,
             rotation_mb,
             flush_interval,
+            otel_enabled,
+            otel_endpoint,
+            otel_sampling_rate,
+            ai_api_port,
+            trace_storage,
         } => {
             info!("Starting log daemon server...");
 
+            // Initialize OpenTelemetry if enabled
+            if otel_enabled {
+                info!("Initializing OpenTelemetry tracing...");
+                let subscriber = otel::init_tracing_and_subscriber(
+                    "daemon_rs",
+                    otel_endpoint.clone(),
+                    otel_sampling_rate,
+                )?;
+                tracing::subscriber::set_global_default(subscriber)
+                    .expect("Failed to set tracing subscriber");
+            } else {
+                // Standard tracing without OTEL
+                tracing_subscriber::fmt()
+                    .with_env_filter(
+                        tracing_subscriber::EnvFilter::from_default_env()
+                            .add_directive(tracing::Level::INFO.into()),
+                    )
+                    .init();
+            }
+
             // Initialize metrics on port 9100
             crate::metrics::init_metrics(9100).await?;
+
+            // Start AI API server if OTEL is enabled
+            if otel_enabled {
+                let trace_dir = trace_storage.clone();
+                let api_port = ai_api_port;
+                tokio::spawn(async move {
+                    if let Err(e) = ai_api::start_api_server(api_port, trace_dir).await {
+                        eprintln!("AI API server error: {}", e);
+                    }
+                });
+                info!("AI Agent API started on port {}", ai_api_port);
+            }
 
             info!("Socket: {:?}", socket);
             info!("Storage: {:?}", storage);

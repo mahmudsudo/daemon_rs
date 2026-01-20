@@ -125,6 +125,7 @@ impl LogServer {
 }
 
 /// Handle a single client connection
+#[tracing::instrument(skip(stream, tx, validator), fields(otel.kind = "server"))]
 async fn handle_connection(
     stream: UnixStream,
     tx: mpsc::Sender<LogEntry>,
@@ -180,8 +181,13 @@ async fn handle_connection(
 
             // Fast Parse (SIMD)
             // Note: simd_json modifies the input slice (in-place string filtering)
+            let parse_span = tracing::info_span!("parse_log", message_size = length);
+            let _guard = parse_span.enter();
+
             match validator.parse_fast(&mut msg_bytes) {
                 Ok(log) => {
+                    drop(_guard);
+                    metrics::counter!(crate::metrics::INGEST_COUNT, 1);
                     // Backpressure check: try_send
                     match tx.try_send(log) {
                         Ok(_) => {}

@@ -1,6 +1,9 @@
+pub mod ai_api;
 pub mod config;
 pub mod metrics;
+pub mod otel;
 pub mod query;
 pub mod schema;
 pub mod server;
 pub mod storage;
+pub mod trace_storage;

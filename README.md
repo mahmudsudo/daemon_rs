@@ -482,6 +482,127 @@ Common issues:
 - Invalid JSON Schema syntax
 - Incompatible schema version
 
+## OpenTelemetry Integration
+
+The daemon includes comprehensive OpenTelemetry (OTEL) tracing to collect distributed traces and expose them to AI agents.
+
+### Enabling Tracing
+
+Start the daemon with OTEL enabled (default):
+
+```bash
+cargo run --release -- serve \
+  --otel-enabled \
+  --otel-sampling-rate 1.0 \
+  --ai-api-port 9101
+```
+
+### CLI Options
+
+- `--otel-enabled` - Enable OpenTelemetry tracing (default: true)
+- `--otel-endpoint <URL>` - OTLP endpoint for external collectors (optional)
+- `--otel-sampling-rate <RATE>` - Sampling rate from 0.0 to 1.0 (default: 1.0)
+- `--ai-api-port <PORT>` - AI API server port (default: 9101)
+- `--trace-storage <PATH>` - Trace storage directory (default: ./traces)
+
+### AI Agent API
+
+The daemon exposes a REST API for AI agents to query and analyze traces.
+
+#### Endpoints
+
+**List Traces**:
+```bash
+curl "http://localhost:9101/api/traces?limit=10" | jq
+```
+
+**Get Trace Details**:
+```bash
+curl "http://localhost:9101/api/traces/{trace_id}" | jq
+```
+
+**Search Slow Traces**:
+```bash
+curl "http://localhost:9101/api/traces?min_duration_ms=100" | jq
+```
+
+**Search Error Traces**:
+```bash
+curl "http://localhost:9101/api/traces?has_error=true" | jq
+```
+
+**Health Check**:
+```bash
+curl "http://localhost:9101/api/health"
+```
+
+#### Response Format
+
+```json
+{
+  "trace_id": "abc123",
+  "root_span": {
+    "span_id": "span1",
+    "name": "handle_connection",
+    "start_time": "2026-01-20T18:00:00Z",
+    "duration_ms": 45.2,
+    "attributes": {
+      "client.socket": "/tmp/logdaemon.sock",
+      "logs.processed": 150
+    },
+    "status": "OK",
+    "children": [...]
+  },
+  "summary": {
+    "total_spans": 12,
+    "total_duration_ms": 45.2,
+    "error_count": 0,
+    "span_breakdown": {...},
+    "slowest_operations": [...]
+  }
+}
+```
+
+### AI Agent Example
+
+```bash
+cargo run --example ai_agent_client
+```
+
+This example demonstrates:
+- Querying traces via REST API
+- Analyzing trace patterns
+- Detecting bottlenecks and anomalies
+- Generating insights
+
+### Export to External Collectors
+
+Send traces to Jaeger, Tempo, or other OTLP-compatible collectors:
+
+```bash
+# Start Jaeger
+docker run -d -p 16686:16686 -p 4317:4317 jaegertracing/all-in-one:latest
+
+# Run daemon with OTLP export
+cargo run --release -- serve --otel-endpoint http://localhost:4317
+
+# View traces in Jaeger UI
+open http://localhost:16686
+```
+
+### Trace Storage
+
+Traces are stored in Parquet format for efficient querying:
+
+```
+traces/
+├── traces_20260120_180000_000.parquet
+├── traces_20260120_180100_001.parquet
+└── ...
+```
+
+Query traces directly from Parquet files using Arrow/DuckDB if needed.
+
 ## Future Enhancements
 
 - [ ] HTTP/gRPC ingestion endpoints
